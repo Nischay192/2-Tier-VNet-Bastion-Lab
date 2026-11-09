@@ -2,7 +2,7 @@
 
 **Hands-on Azure infrastructure lab demonstrating network segmentation, HTTP load balancing, secure administrative access, and web-to-application connectivity.**
 
-![Azure architecture](docs/architecture.md)
+[View architecture and request-flow diagrams](docs/architecture.md)
 
 ## Overview
 
