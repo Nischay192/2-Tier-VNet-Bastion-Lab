@@ -7,96 +7,37 @@ Demonstrate a segmented two-tier Azure deployment with **one public HTTP entry p
 ## 1. Infrastructure at a glance
 
 ```mermaid
-flowchart TB
-    CLIENT(["Internet client"])
-    ADMIN(["Administrator"])
-    LB["Azure Standard Load Balancer<br/>Public HTTP entry • port 80"]
-
-    subgraph RG["Azure · Canada Central · rg-two-tier-lab"]
-        direction TB
-        subgraph VNET["vnet-two-tier-lab · 10.10.0.0/16"]
-            direction TB
-            subgraph WEB["WEB TIER · snet-web · 10.10.1.0/24"]
-                direction LR
-                W1["vm-web-01<br/>Ubuntu + Nginx<br/>10.10.1.4"]
-                W2["vm-web-02<br/>Ubuntu + Nginx<br/>10.10.1.5"]
-            end
-            subgraph APP["APPLICATION TIER · snet-app · 10.10.2.0/24"]
-                API["vm-app-01<br/>Private API · TCP 8080"]
-            end
-            subgraph BASNET["ADMIN ACCESS · AzureBastionSubnet · 10.10.250.0/26"]
-                BAS["Azure Bastion"]
-            end
+flowchart LR
+    U(["Internet"]) --> LB["Azure Load Balancer<br/>HTTP :80"]
+    subgraph VNET["Azure VNet · 10.10.0.0/16"]
+        direction LR
+        subgraph WEB["Web subnet · 10.10.1.0/24"]
+            W1["Web VM 01<br/>Nginx"]
+            W2["Web VM 02<br/>Nginx"]
         end
-        NAT["NAT Gateway<br/>Outbound connectivity"]
+        subgraph APP["App subnet · 10.10.2.0/24"]
+            A["Private API VM<br/>:8080"]
+        end
+        B["Azure Bastion"]
     end
-
-    CLIENT -->|"HTTP"| LB
-    LB -->|"Backend pool"| W1
-    LB -->|"Backend pool"| W2
-    W1 -->|"/api · reverse proxy"| API
-    W2 -->|"/api · reverse proxy"| API
-    ADMIN -.->|"Secure admin session"| BAS
-    BAS -.->|"VM access"| W1
-    BAS -.->|"VM access"| W2
-    BAS -.->|"VM access"| API
-    WEB -.->|"Outbound traffic"| NAT
-
-    classDef external fill:#eaf4ff,stroke:#2563eb,color:#16345d,stroke-width:1.5px;
-    classDef entry fill:#dbeafe,stroke:#1d4ed8,color:#173a71,stroke-width:2px;
-    classDef web fill:#e7f5ee,stroke:#15803d,color:#14532d,stroke-width:1.5px;
-    classDef app fill:#fff1dc,stroke:#d97706,color:#78350f,stroke-width:1.5px;
-    classDef admin fill:#ede9fe,stroke:#7c3aed,color:#4c1d95,stroke-width:1.5px;
-    classDef egress fill:#f1f5f9,stroke:#64748b,color:#334155;
-    class CLIENT,ADMIN external;
-    class LB entry;
-    class W1,W2 web;
-    class API app;
-    class BAS admin;
-    class NAT egress;
+    LB --> W1 & W2
+    W1 & W2 -->|"/api"| A
+    Admin(["Admin"]) -.-> B
+    B -.-> WEB
+    WEB -.-> NAT["NAT Gateway<br/>Outbound"]
+    classDef blue fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+    classDef green fill:#dcfce7,stroke:#16a34a,color:#14532d;
+    classDef amber fill:#ffedd5,stroke:#ea580c,color:#7c2d12;
+    classDef purple fill:#ede9fe,stroke:#7c3aed,color:#4c1d95;
+    class LB blue;
+    class W1,W2 green;
+    class A amber;
+    class B purple;
 ```
 
 **Reading the diagram:** Solid arrows show application requests; dashed arrows show administrative and outbound connectivity. Network Security Groups (`nsg-web`, `nsg-app`) control the respective subnet traffic; the precise NSG rules are not reproduced here. NAT Gateway is shown as the outbound component without asserting an unverified subnet association.
 
 ## 2. Network and security boundaries
-
-```mermaid
-flowchart LR
-    subgraph PUBLIC["Public boundary"]
-        USER(["Internet"])
-        LB["Standard Load Balancer<br/>Public HTTP frontend"]
-    end
-    subgraph VNET["Azure Virtual Network · 10.10.0.0/16"]
-        subgraph WEB["snet-web · 10.10.1.0/24 · nsg-web"]
-            W1["vm-web-01<br/>10.10.1.4"]
-            W2["vm-web-02<br/>10.10.1.5"]
-        end
-        subgraph APP["snet-app · 10.10.2.0/24 · nsg-app"]
-            A["vm-app-01<br/>API · :8080"]
-        end
-        subgraph B["AzureBastionSubnet · 10.10.250.0/26"]
-            BST["Azure Bastion"]
-        end
-    end
-    OPS(["Administrator"])
-    USER -->|"HTTP"| LB
-    LB --> W1
-    LB --> W2
-    W1 -->|"Internal /api"| A
-    W2 -->|"Internal /api"| A
-    OPS -.-> BST
-    BST -.-> W1
-    BST -.-> W2
-    BST -.-> A
-    classDef public fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
-    classDef web fill:#dcfce7,stroke:#15803d,color:#14532d;
-    classDef app fill:#ffedd5,stroke:#ea580c,color:#7c2d12;
-    classDef ops fill:#ede9fe,stroke:#7c3aed,color:#4c1d95;
-    class USER,LB public;
-    class W1,W2 web;
-    class A app;
-    class OPS,BST ops;
-```
 
 | Boundary | Service / configuration | Role |
 |---|---|---|
