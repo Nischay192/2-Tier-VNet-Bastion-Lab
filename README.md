@@ -70,6 +70,46 @@ IP addresses are from the lab environment. The VM, load-balancer and subnet name
 
 These observations establish **functional connectivity and probe health**, not tested automatic failover, resilience under load, or an uptime SLO.
 
+## Project screenshots
+
+These screenshots document the deployed configuration and tests performed during the lab. [Browse all 21 screenshots](screenshots/).
+
+### 1. Virtual network and subnets
+
+![Azure virtual network address space and tiered subnets](screenshots/03-vnet-address-space.png)
+
+*Virtual network address space (10.10.0.0/16) with dedicated web, application and Bastion subnets.*
+
+### 2. Application-tier network security
+
+![Application NSG inbound security rules](screenshots/06-app-vm-security-rules.png)
+
+*Application subnet permits TCP 8080 from the web subnet and SSH from the Bastion subnet, with a higher-priority custom deny rule for other inbound traffic.*
+
+### 3. Nginx reverse proxy and private API
+
+![Nginx reverse proxy configuration and API test](screenshots/12-nginx-reverse-proxy.png)
+
+*Nginx forwards `/api` requests to the private app at `10.10.2.4:8080`; the configuration test and local proxy request succeeded.*
+
+### 4. Load balancer backend health
+
+![Healthy Azure Load Balancer web backends](screenshots/15-load-balancer-backend-health.png)
+
+*Both Nginx backends reported healthy for the HTTP load-balancing rule at the time of testing.*
+
+### 5. Application response through public endpoint
+
+![API response via public load balancer IP](screenshots/18-api-response.png)
+
+*The public `/api` endpoint returned a JSON response from `vm-app-01` with `"status": "healthy"`.*
+
+### 6. Health probe change and recovery
+
+![Health probe metric drop and return](screenshots/20-backend-health-failure-recovery.png)
+
+*The Azure metric shows one backend's health-probe status falling and returning to healthy. This **does not by itself establish automatic recovery or uninterrupted client traffic**.*
+
 ## Example request flow
 
 1. A client sends an HTTP request to the load balancer's public IP.
@@ -83,7 +123,7 @@ These observations establish **functional connectivity and probe health**, not t
 - [Validation checklist and observed results](docs/validation.md)
 - [Troubleshooting notes](docs/troubleshooting.md)
 - [Sample Nginx reverse-proxy configuration](nginx/reverse-proxy.example.conf)
-- [Screenshot guidance](screenshots/README.md)
+- [Complete screenshot evidence (21 images)](screenshots/)
 
 ## Key takeaways
 
